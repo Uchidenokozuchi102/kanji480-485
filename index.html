@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>漢字テスト対策 | ことわざ・難読語</title>
+    <meta name="description" content="漢字テスト対策アプリ。難読漢字・ことわざ・穴埋め問題を暗記モードとクイズモードで学習できます。">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        zen: ['"Zen Maru Gothic"', '"M PLUS Rounded 1c"', 'sans-serif'],
+                        mplus: ['"M PLUS Rounded 1c"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts preconnect + preload -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&family=Zen+Maru+Gothic:wght@400;700;900&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* フォント読み込み前の FOUC/FOUT 対策 */
+        html {
+            font-family: 'Zen Maru Gothic', 'M PLUS Rounded 1c', 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* 基底スタイル */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Zen Maru Gothic', 'M PLUS Rounded 1c', sans-serif;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            /* タップ遅延防止 */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 軽量背景装飾 (CSS only, no blur/canvas) */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -30%;
+            right: -20%;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -20%;
+            left: -15%;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 画面切り替えアニメーション */
+        .screen {
+            display: none;
+            position: relative;
+            z-index: 1;
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 共通ボタン */
+        .btn-primary {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 28px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.15s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 4px 14px rgba(14, 165, 233, 0.25);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-secondary:hover,
+        .btn-secondary.active-filter {
+            background: rgba(14, 165, 233, 0.15);
+            color: #38bdf8;
+            border-color: rgba(14, 165, 233, 0.3);
+        }
+
+        /* 選択肢ボタン */
+        .choice-btn {
+            width: 100%;
+            text-align: left;
+            background: rgba(255, 255, 255, 0.04);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.1s, border-color 0.1s, transform 0.08s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+        }
+
+        .choice-btn:active {
+            transform: scale(0.98);
+        }
+
+        .choice-btn.correct {
+            background: rgba(34, 197, 94, 0.15) !important;
+            border-color: #22c55e !important;
+            color: #4ade80 !important;
+        }
+
+        .choice-btn.wrong {
+            background: rgba(239, 68, 68, 0.15) !important;
+            border-color: #ef4444 !important;
+            color: #f87171 !important;
+        }
+
+        .choice-btn.disabled {
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        /* フラッシュカード */
+        .flashcard-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.15s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .flashcard-item:active {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .flashcard-answer {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.25s ease, opacity 0.2s ease, margin-top 0.2s ease;
+            margin-top: 0;
+        }
+
+        .flashcard-answer.open {
+            max-height: 200px;
+            opacity: 1;
+            margin-top: 12px;
+        }
+
+        /* 結果オーバーレイ */
+        .result-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.85);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.15s ease, visibility 0.15s ease;
+        }
+
+        .result-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .result-card {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 32px 28px;
+            text-align: center;
+            max-width: 360px;
+            width: 90%;
+            transform: scale(0.92);
+            transition: transform 0.2s ease;
+        }
+
+        .result-overlay.show .result-card {
+            transform: scale(1);
+        }
+
+        /* 最終結果画面のバー */
+        .score-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 5px;
+            background: linear-gradient(90deg, #0ea5e9, #22c55e);
+            transition: width 0.6s ease;
+        }
+
+        /* プログレスバー */
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+            transition: width 0.2s ease;
+            border-radius: 2px;
+        }
+
+        /* タグバッジ */
+        .cat-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            background: rgba(14, 165, 233, 0.12);
+            color: #38bdf8;
+        }
+
+        /* スクロールバー */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ======================== スタート画面 ======================== -->
+    <div id="screen-start" class="screen active">
+        <div class="flex flex-col items-center justify-center min-h-dvh px-5 py-10">
+            <!-- ロゴ -->
+            <div class="mb-3">
+                <span class="text-5xl">📚</span>
+            </div>
+            <h1 class="text-3xl font-black text-white mb-2 tracking-tight"
+                style="font-family:'Zen Maru Gothic',sans-serif;">漢字テスト対策</h1>
+            <p class="text-sm text-slate-400 mb-10">ことわざ・難読語</p>
+
+            <!-- モード選択 -->
+            <div class="w-full max-w-xs space-y-4">
+                <button onclick="App.startFlashcard()"
+                    class="btn-primary w-full flex items-center justify-center gap-3">
+                    <span class="text-xl">🗂️</span>
+                    <span>暗記モード</span>
+                </button>
+                <button onclick="App.startQuiz()" class="btn-primary w-full flex items-center justify-center gap-3"
+                    style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); box-shadow: 0 4px 14px rgba(99,102,241,0.25);">
+                    <span class="text-xl">✏️</span>
+                    <span>実践テスト</span>
+                </button>
+            </div>
+
+            <!-- 統計表示 -->
+            <div class="mt-10 flex gap-6 text-center">
+                <div>
+                    <div class="text-2xl font-black text-sky-400" id="stat-total">0</div>
+                    <div class="text-xs text-slate-500">総問題数</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-black text-emerald-400" id="stat-cats">0</div>
+                    <div class="text-xs text-slate-500">カテゴリ</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================== 暗記モード ======================== -->
+    <div id="screen-flashcard" class="screen">
+        <div class="max-w-lg mx-auto px-4 py-6 min-h-dvh">
+            <!-- ヘッダー -->
+            <div class="flex items-center justify-between mb-5">
+                <button onclick="App.goHome()" class="btn-secondary text-sm px-3 py-2">← 戻る</button>
+                <h2 class="text-lg font-bold text-white">🗂️ 暗記モード</h2>
+                <div class="w-16"></div>
+            </div>
+
+            <!-- フィルター -->
+            <div id="filter-bar" class="flex gap-2 mb-5 overflow-x-auto pb-2 scrollbar-hide"></div>
+
+            <!-- カードリスト -->
+            <div id="flashcard-list" class="space-y-0"></div>
+        </div>
+    </div>
+
+    <!-- ======================== クイズモード ======================== -->
+    <div id="screen-quiz" class="screen">
+        <div class="max-w-lg mx-auto px-4 py-6 min-h-dvh flex flex-col">
+            <!-- ヘッダー -->
+            <div class="flex items-center justify-between mb-3">
+                <button onclick="App.goHome()" class="btn-secondary text-sm px-3 py-2">← 戻る</button>
+                <div class="text-sm text-slate-400 font-bold" id="quiz-counter">1 / 10</div>
+                <div class="w-16"></div>
+            </div>
+
+            <!-- プログレスバー -->
+            <div class="progress-bar mb-6">
+                <div class="progress-fill" id="quiz-progress" style="width:0%"></div>
+            </div>
+
+            <!-- 問題カード -->
+            <div class="flex-1 flex flex-col justify-center">
+                <div class="text-center mb-8">
+                    <span class="cat-badge mb-3 inline-block" id="quiz-cat"></span>
+                    <div class="text-xs text-slate-500 mb-2" id="quiz-type-label"></div>
+                    <div class="text-4xl font-black text-white leading-tight" id="quiz-question"
+                        style="font-family:'Zen Maru Gothic',sans-serif;"></div>
+                </div>
+
+                <!-- 選択肢 -->
+                <div class="space-y-3" id="quiz-choices"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================== 最終結果画面 ======================== -->
+    <div id="screen-result" class="screen">
+        <div class="flex flex-col items-center justify-center min-h-dvh px-5 py-10">
+            <div class="text-5xl mb-4" id="result-emoji">🎉</div>
+            <h2 class="text-2xl font-black text-white mb-1">テスト結果</h2>
+            <p class="text-slate-400 text-sm mb-6">おつかれさまでした！</p>
+
+            <!-- スコア -->
+            <div class="text-6xl font-black mb-2" id="result-score"
+                style="background: linear-gradient(135deg,#0ea5e9,#22c55e); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                0%</div>
+            <div class="text-sm text-slate-400 mb-4" id="result-detail">0 / 0 問正解</div>
+
+            <!-- スコアバー -->
+            <div class="w-full max-w-xs mb-8">
+                <div class="score-bar-bg">
+                    <div class="score-bar-fill" id="result-bar" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- 間違えた問題一覧 -->
+            <div class="w-full max-w-sm mb-8" id="result-wrong-section" style="display:none;">
+                <h3 class="text-sm font-bold text-slate-400 mb-3">間違えた問題</h3>
+                <div id="result-wrong-list" class="space-y-2"></div>
+            </div>
+
+            <!-- ボタン -->
+            <div class="space-y-3 w-full max-w-xs">
+                <button onclick="App.startQuiz()" class="btn-primary w-full">もう一度チャレンジ</button>
+                <button onclick="App.goHome()" class="btn-secondary w-full">ホームに戻る</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================== 結果オーバーレイ ======================== -->
+    <div id="result-overlay" class="result-overlay">
+        <div class="result-card">
+            <div class="text-5xl mb-3" id="overlay-icon">⭕</div>
+            <div class="text-xl font-black mb-1" id="overlay-title">正解！</div>
+            <div class="text-3xl font-black text-white my-3" id="overlay-answer"
+                style="font-family:'Zen Maru Gothic',sans-serif;"></div>
+            <p class="text-sm text-slate-400 leading-relaxed mb-5" id="overlay-desc"></p>
+            <button onclick="App.nextQuestion()" class="btn-primary w-full" id="overlay-next-btn">次の問題へ →</button>
+        </div>
+    </div>
+
+
+    <script>
+        // ==================== データ ====================
+        const DATA = [
+            { id: 1, type: "reading", q: "躊躇", a: "ちゅうちょ", wrong: ["ちゅうしょ", "しゅうちょ", "じゅうしょ"], cat: "難読", desc: "決心がつかず、ぐずぐずすること。ためらい。" },
+            { id: 2, type: "reading", q: "拘泥", a: "こうでい", wrong: ["こうどろ", "ぐでい", "かてい"], cat: "難読", desc: "気にしてこだわること。必要以上に気にすること。" },
+            { id: 3, type: "reading", q: "誤謬", a: "ごびゅう", wrong: ["ごびょう", "ごりゅう", "ごこう"], cat: "難読", desc: "まちがい。あやまり。" },
+            { id: 4, type: "reading", q: "完遂", a: "かんすい", wrong: ["かんつい", "かんぜい", "かんしょう"], cat: "難読", desc: "最後までやりとおすこと。" },
+            { id: 5, type: "reading", q: "忌憚", a: "きたん", wrong: ["きだん", "いみ", "きぶん"], cat: "難読", desc: "遠慮すること。嫌い嫌がること。「忌憚のない意見」などで使う。" },
+            { id: 6, type: "reading", q: "怪訝", a: "けげん", wrong: ["かいが", "かいあ", "けが"], cat: "難読", desc: "不思議で納得がいかないさま。" },
+            { id: 7, type: "reading", q: "言質", a: "げんち", wrong: ["げんしつ", "げんし", "ことじち"], cat: "難読", desc: "後で証拠となるような言葉。「言質を取る」" },
+            { id: 8, type: "reading", q: "市井", a: "しせい", wrong: ["いちい", "ししょう", "しじょう"], cat: "難読", desc: "人家が集まっている所。まち。世間。" },
+            { id: 9, type: "reading", q: "贔屓", a: "ひいき", wrong: ["かいがい", "ひき", "ぞくぞく"], cat: "難読", desc: "気に入った者を特に引き立てること。" },
+            { id: 10, type: "reading", q: "乖離", a: "かいり", wrong: ["じょうり", "はいり", "きょり"], cat: "難読", desc: "そむきはなれること。結びつきが離れること。" },
+            { id: 11, type: "reading", q: "億劫", a: "おっくう", wrong: ["おくくう", "おっこう", "おおくう"], cat: "難読", desc: "面倒で気が進まないこと。" },
+            { id: 12, type: "reading", q: "斡旋", a: "あっせん", wrong: ["かんせん", "あつせん", "あさせん"], cat: "難読", desc: "間に入って双方をうまく取り持つこと。" },
+            { id: 13, type: "reading", q: "直截", a: "ちょくせつ", wrong: ["ちょくさい", "ちょくさつ", "じきさい"], cat: "難読", desc: "まわりくどくなく、ずばりとしていること。" },
+            { id: 14, type: "reading", q: "狡猾", a: "こうかつ", wrong: ["こうあく", "きょうかつ", "こうこつ"], cat: "難読", desc: "悪賢いこと。ずるいこと。" },
+            { id: 15, type: "reading", q: "吹聴", a: "ふいちょう", wrong: ["すいちょう", "ふいとく", "ふうちょう"], cat: "難読", desc: "多くの人に言いふらすこと。" },
+            { id: 16, type: "reading", q: "嗚咽", a: "おえつ", wrong: ["おいつ", "あいえつ", "おえん"], cat: "難読", desc: "声を詰まらせて泣くこと。むせび泣き。" },
+            { id: 17, type: "reading", q: "諧謔", a: "かいぎゃく", wrong: ["かいぎょ", "ちょうしょう", "かいげき"], cat: "難読", desc: "おもしろみのある気の利いた言葉。ユーモア。" },
+            { id: 18, type: "reading", q: "軋轢", a: "あつれき", wrong: ["きれき", "ざつれき", "あつらく"], cat: "難読", desc: "車輪がきしること。転じて、人と人との仲が悪くなること。" },
+            { id: 19, type: "reading", q: "蕨", a: "わらび", wrong: ["わら", "いばら", "もずく"], cat: "生物", desc: "山菜の一種。春にこぶし状の若芽を出す。" },
+            { id: 20, type: "reading", q: "不如帰", a: "ほととぎす", wrong: ["うぐいす", "ひばり", "かわせみ"], cat: "生物", desc: "初夏に渡来し、独特の鳴き声をする鳥。" },
+            { id: 21, type: "reading", q: "雲雀", a: "ひばり", wrong: ["ひばら", "くもすずめ", "つばめ"], cat: "生物", desc: "春、空高く舞い上がってさえずる鳥。" },
+            { id: 22, type: "reading", q: "無花果", a: "いちじく", wrong: ["ざくろ", "あけび", "パパイア"], cat: "生物", desc: "花が咲かないように見えて実がなる植物。" },
+            { id: 23, type: "reading", q: "百舌", a: "もず", wrong: ["ひゃくした", "つぐみ", "うずら"], cat: "生物", desc: "秋に高鳴きをする鳥。「百舌の早贄」で有名。" },
+            { id: 24, type: "reading", q: "蛤", a: "はまぐり", wrong: ["あさり", "しじみ", "さざえ"], cat: "生物", desc: "二枚貝の一種。ひな祭りの吸い物などに使われる。" },
+            { id: 30, type: "fill", q: "？隠して尻隠さず", a: "頭", wrong: ["顔", "手", "足"], cat: "ことわざ", desc: "悪事や欠点の一部を隠したつもりでも、他の部分が現れていること。" },
+            { id: 31, type: "fill", q: "鬼の？にも涙", a: "目", wrong: ["顔", "心", "角"], cat: "ことわざ", desc: "無慈悲な人でも、時には慈悲の心を起こして涙を流すこと。" },
+            { id: 32, type: "fill", q: "？にたこができる", a: "耳", wrong: ["手", "足", "指"], cat: "ことわざ", desc: "同じことを何度も聞かされて嫌になること。" },
+            { id: 34, type: "fill", q: "？八丁手八丁", a: "口", wrong: ["舌", "頭", "声"], cat: "ことわざ", desc: "「口八丁手八丁」。しゃべることもやることも達者なこと。" },
+            { id: 40, type: "fill", q: "？の遠吠え", a: "犬", wrong: ["狼", "狐", "虎"], cat: "動物", desc: "臆病者が陰で威張ったり、他人の悪口を言ったりすること。" },
+            { id: 41, type: "fill", q: "？の耳に念仏", a: "馬", wrong: ["牛", "豚", "羊"], cat: "動物", desc: "いくら意見をしても効き目がないこと。" },
+            { id: 42, type: "fill", q: "？も木から落ちる", a: "猿", wrong: ["猫", "鳥", "リス"], cat: "動物", desc: "達人でも失敗することがある。弘法にも筆の誤り。" },
+            { id: 43, type: "fill", q: "？も杓子も", a: "猫", wrong: ["犬", "牛", "ネズミ"], cat: "動物", desc: "何もかもすべて。だれもかれも。" },
+            { id: 44, type: "fill", q: "？の一声", a: "鶴", wrong: ["雀", "鷲", "鷹"], cat: "動物", desc: "多くの議論を抑えて決定する権力者の一言。" },
+            { id: 45, type: "fill", q: "？の涙", a: "雀", wrong: ["蜂", "蚊", "蝉"], cat: "動物", desc: "ほんのわずかなこと。" }
+        ];
+
+        // ==================== アプリケーション ====================
+        const App = (() => {
+            // 要素キャッシュ（DOMアクセスを最小化）
+            const $ = (id) => document.getElementById(id);
+            const screens = {};
+            const els = {};
+
+            // 状態
+            let quizQuestions = [];
+            let currentIndex = 0;
+            let score = 0;
+            let wrongList = [];
+            let answered = false;
+            let currentFilter = 'all';
+
+            // カテゴリ一覧の取得
+            const categories = [...new Set(DATA.map(d => d.cat))];
+
+            // ==================== 初期化 ====================
+            function init() {
+                // 画面要素をキャッシュ
+                screens.start = $('screen-start');
+                screens.flashcard = $('screen-flashcard');
+                screens.quiz = $('screen-quiz');
+                screens.result = $('screen-result');
+
+                // よく使う要素をキャッシュ
+                els.filterBar = $('filter-bar');
+                els.flashcardList = $('flashcard-list');
+                els.quizCounter = $('quiz-counter');
+                els.quizProgress = $('quiz-progress');
+                els.quizCat = $('quiz-cat');
+                els.quizTypeLabel = $('quiz-type-label');
+                els.quizQuestion = $('quiz-question');
+                els.quizChoices = $('quiz-choices');
+                els.resultOverlay = $('result-overlay');
+                els.overlayIcon = $('overlay-icon');
+                els.overlayTitle = $('overlay-title');
+                els.overlayAnswer = $('overlay-answer');
+                els.overlayDesc = $('overlay-desc');
+                els.overlayNextBtn = $('overlay-next-btn');
+                els.resultEmoji = $('result-emoji');
+                els.resultScore = $('result-score');
+                els.resultDetail = $('result-detail');
+                els.resultBar = $('result-bar');
+                els.resultWrongSection = $('result-wrong-section');
+                els.resultWrongList = $('result-wrong-list');
+
+                // スタート画面の統計
+                $('stat-total').textContent = DATA.length;
+                $('stat-cats').textContent = categories.length;
+            }
+
+            // ==================== 画面切り替え ====================
+            function showScreen(name) {
+                for (const key in screens) {
+                    if (key === name) {
+                        screens[key].classList.add('active');
+                    } else {
+                        screens[key].classList.remove('active');
+                    }
+                }
+            }
+
+            function goHome() {
+                els.resultOverlay.classList.remove('show');
+                showScreen('start');
+            }
+
+            // ==================== シャッフル ====================
+            function shuffle(arr) {
+                const a = arr.slice();
+                for (let i = a.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a;
+            }
+
+            // ==================== 暗記モード ====================
+            function startFlashcard() {
+                showScreen('flashcard');
+                currentFilter = 'all';
+                renderFilterBar();
+                renderFlashcards();
+            }
+
+            function renderFilterBar() {
+                // DocumentFragmentで一括書き込み
+                const frag = document.createDocumentFragment();
+
+                const allBtn = document.createElement('button');
+                allBtn.className = 'btn-secondary text-xs whitespace-nowrap' + (currentFilter === 'all' ? ' active-filter' : '');
+                allBtn.textContent = 'すべて';
+                allBtn.addEventListener('click', () => {
+                    currentFilter = 'all';
+                    renderFilterBar();
+                    renderFlashcards();
+                }, { passive: true });
+                frag.appendChild(allBtn);
+
+                categories.forEach(cat => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-secondary text-xs whitespace-nowrap' + (currentFilter === cat ? ' active-filter' : '');
+                    btn.textContent = cat;
+                    btn.addEventListener('click', () => {
+                        currentFilter = cat;
+                        renderFilterBar();
+                        renderFlashcards();
+                    }, { passive: true });
+                    frag.appendChild(btn);
+                });
+
+                els.filterBar.innerHTML = '';
+                els.filterBar.appendChild(frag);
+            }
+
+            function renderFlashcards() {
+                const filtered = currentFilter === 'all' ? DATA : DATA.filter(d => d.cat === currentFilter);
+                const frag = document.createDocumentFragment();
+
+                filtered.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'flashcard-item';
+
+                    const topRow = document.createElement('div');
+                    topRow.className = 'flex items-center justify-between';
+
+                    const qText = document.createElement('span');
+                    qText.className = 'text-lg font-bold text-white';
+                    qText.style.fontFamily = "'Zen Maru Gothic', sans-serif";
+                    qText.textContent = item.q;
+
+                    const badge = document.createElement('span');
+                    badge.className = 'cat-badge';
+                    badge.textContent = item.cat;
+
+                    topRow.appendChild(qText);
+                    topRow.appendChild(badge);
+
+                    const answerDiv = document.createElement('div');
+                    answerDiv.className = 'flashcard-answer';
+
+                    const aDivider = document.createElement('div');
+                    aDivider.className = 'border-t border-slate-700 pt-3';
+
+                    const aLabel = document.createElement('div');
+                    aLabel.className = 'text-sky-400 font-bold text-base mb-1';
+                    aLabel.textContent = item.a;
+
+                    const aDesc = document.createElement('div');
+                    aDesc.className = 'text-slate-400 text-sm leading-relaxed';
+                    aDesc.textContent = item.desc;
+
+                    aDivider.appendChild(aLabel);
+                    aDivider.appendChild(aDesc);
+                    answerDiv.appendChild(aDivider);
+
+                    card.appendChild(topRow);
+                    card.appendChild(answerDiv);
+
+                    // タップで開閉（即座に反応）
+                    card.addEventListener('click', () => {
+                        answerDiv.classList.toggle('open');
+                    }, { passive: true });
+
+                    frag.appendChild(card);
+                });
+
+                els.flashcardList.innerHTML = '';
+                els.flashcardList.appendChild(frag);
+            }
+
+            // ==================== クイズモード ====================
+            function startQuiz() {
+                quizQuestions = shuffle(DATA);
+                currentIndex = 0;
+                score = 0;
+                wrongList = [];
+                answered = false;
+                showScreen('quiz');
+                renderQuestion();
+            }
+
+            function renderQuestion() {
+                const item = quizQuestions[currentIndex];
+                const total = quizQuestions.length;
+
+                // カウンター更新
+                els.quizCounter.textContent = `${currentIndex + 1} / ${total}`;
+                // プログレス
+                els.quizProgress.style.width = `${((currentIndex) / total) * 100}%`;
+
+                // カテゴリ
+                els.quizCat.textContent = item.cat;
+
+                // 問題タイプ
+                els.quizTypeLabel.textContent = item.type === 'reading' ? '読みを選べ' : '？に入る文字を選べ';
+
+                // 問題文
+                els.quizQuestion.textContent = item.q;
+
+                // 選択肢生成（シャッフル）
+                const choices = shuffle([item.a, ...item.wrong]);
+                const frag = document.createDocumentFragment();
+
+                choices.forEach((choice, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'choice-btn';
+                    btn.innerHTML = `<span class="text-slate-500 text-xs font-bold mr-3">${['A', 'B', 'C', 'D'][idx]}</span>${choice}`;
+                    // 即時反応のためのイベントリスナー
+                    btn.addEventListener('click', () => handleAnswer(choice, item, btn), { passive: true });
+                    frag.appendChild(btn);
+                });
+
+                els.quizChoices.innerHTML = '';
+                els.quizChoices.appendChild(frag);
+
+                answered = false;
+            }
+
+            function handleAnswer(selected, item, clickedBtn) {
+                // 二重タップ防止
+                if (answered) return;
+                answered = true;
+
+                const isCorrect = selected === item.a;
+
+                if (isCorrect) {
+                    score++;
+                } else {
+                    wrongList.push(item);
+                }
+
+                // 全ボタンを無効化し、正解/不正解を表示
+                const btns = els.quizChoices.querySelectorAll('.choice-btn');
+                btns.forEach(btn => {
+                    btn.classList.add('disabled');
+                    // テキスト中の正解をハイライト
+                    if (btn.textContent.includes(item.a)) {
+                        btn.classList.add('correct');
+                    }
+                });
+                if (!isCorrect) {
+                    clickedBtn.classList.add('wrong');
+                }
+
+                // 即座にオーバーレイ表示（setTimeoutなし）
+                showResultOverlay(isCorrect, item);
+            }
+
+            function showResultOverlay(isCorrect, item) {
+                els.overlayIcon.textContent = isCorrect ? '⭕' : '❌';
+                els.overlayTitle.textContent = isCorrect ? '正解！' : '不正解…';
+                els.overlayTitle.style.color = isCorrect ? '#4ade80' : '#f87171';
+                els.overlayAnswer.textContent = `${item.q}：${item.a}`;
+                els.overlayDesc.textContent = item.desc;
+
+                // 最後の問題かどうかでボタンテキスト変更
+                const isLast = currentIndex >= quizQuestions.length - 1;
+                els.overlayNextBtn.textContent = isLast ? '結果を見る 🏆' : '次の問題へ →';
+
+                // 即座に表示
+                els.resultOverlay.classList.add('show');
+            }
+
+            function nextQuestion() {
+                els.resultOverlay.classList.remove('show');
+
+                currentIndex++;
+                if (currentIndex >= quizQuestions.length) {
+                    showFinalResult();
+                } else {
+                    renderQuestion();
+                }
+            }
+
+            // ==================== 最終結果 ====================
+            function showFinalResult() {
+                const total = quizQuestions.length;
+                const pct = Math.round((score / total) * 100);
+
+                // 絵文字の決定
+                if (pct === 100) els.resultEmoji.textContent = '🏆';
+                else if (pct >= 80) els.resultEmoji.textContent = '🎉';
+                else if (pct >= 60) els.resultEmoji.textContent = '😊';
+                else if (pct >= 40) els.resultEmoji.textContent = '💪';
+                else els.resultEmoji.textContent = '📖';
+
+                els.resultScore.textContent = `${pct}%`;
+                els.resultDetail.textContent = `${score} / ${total} 問正解`;
+
+                // バーアニメーション
+                requestAnimationFrame(() => {
+                    els.resultBar.style.width = `${pct}%`;
+                });
+
+                // 間違えた問題一覧
+                if (wrongList.length > 0) {
+                    els.resultWrongSection.style.display = 'block';
+                    const frag = document.createDocumentFragment();
+                    wrongList.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'bg-slate-800/50 rounded-lg p-3 border border-slate-700/50';
+                        div.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-white font-bold" style="font-family:'Zen Maru Gothic',sans-serif;">${item.q}</span>
+                        <span class="cat-badge">${item.cat}</span>
+                    </div>
+                    <div class="text-sky-400 text-sm font-bold">${item.a}</div>
+                    <div class="text-slate-500 text-xs mt-1">${item.desc}</div>
+                `;
+                        frag.appendChild(div);
+                    });
+                    els.resultWrongList.innerHTML = '';
+                    els.resultWrongList.appendChild(frag);
+                } else {
+                    els.resultWrongSection.style.display = 'none';
+                }
+
+                showScreen('result');
+            }
+
+            // ==================== 公開API ====================
+            return {
+                init,
+                goHome,
+                startFlashcard,
+                startQuiz,
+                nextQuestion
+            };
+        })();
+
+        // DOM準備完了と同時に初期化
+        document.addEventListener('DOMContentLoaded', App.init, { passive: true });
+    </script>
+
+</body>
+
+</html>
